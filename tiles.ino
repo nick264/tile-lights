@@ -88,6 +88,7 @@ float activeTransIntensity;
 float activeTransTrailLength;
 float ambientIntensity;
 
+
 void processCommands() {
   byte size = Serial.read();
 
@@ -308,6 +309,97 @@ void chordPulseLoop() {
   i+=1;
 }
 
+
+// FSR TESTING VARS
+
+int fsrValue = 0;
+const int fsrPin = 3;
+const int lightPin = 10;
+const int lightCount = 43 * 6;
+
+float targetLightPerc = 0;
+float actualLightPerc = 0;
+float diff;
+const float maxLightPercChange = 0.05;
+float dir;
+
+float pulseOverlay = 1.0;
+//int pulseDir = -1;
+float pulseRate = 2 * PI / 150;
+float pulseMin = 0.35;
+float pulseRad = 0.0;
+float fsrPulseOffset;
+float amplitude;
+
+// MAIN FSR TESTING LOOP
+
+void fsrTest() {
+  // put your main code here, to run repeatedly:
+  fsrValue = analogRead(fsrPin);
+
+  targetLightPerc = fsrValue / 1024.0;
+
+  diff = abs(actualLightPerc - targetLightPerc);
+  if(diff > maxLightPercChange) {
+    dir = (targetLightPerc - actualLightPerc) / diff;
+    actualLightPerc = actualLightPerc + maxLightPercChange * dir;
+  }
+  else {
+    actualLightPerc = targetLightPerc;
+  }
+
+  if( actualLightPerc > 0.8 ) {
+    tickPulse(true);
+  }
+  else {
+    tickPulse(false);
+  }
+  
+//  Serial.println(fsrValue);  
+//  Serial.println('-------');
+//  Serial.println(targetLightPerc);
+//  Serial.println(actualLightPerc);
+
+  setColor(strip.Color(0,int(actualLightPerc * pulseOverlay * 255.0),0));
+  
+  delay(10);
+}
+
+void setColor(uint32_t pixelColor) {
+  for( int k = 0; k < strip.numPixels(); k++ ) {
+    strip.setPixelColor(k,pixelColor);
+  }
+
+  strip.show();
+}
+
+void tickPulse(bool continueCycle) {
+  pulseRad += pulseRate;
+
+  if(pulseRad > 2 * PI) {
+    if(continueCycle) {
+      pulseRad -= 2 * PI;
+    }
+    else {
+      pulseRad -= pulseRate;
+    }
+  }
+
+  fsrPulseOffset = ( pulseMin + 1.0 ) / 2.0;
+  amplitude = ( 1.0 - pulseMin ) / 2.0;
+
+  pulseOverlay = cos(pulseRad)*amplitude + fsrPulseOffset;
+
+//  pulseOverlay += pulseDir * pulseRate;
+//
+//  if(pulseOverlay <= pulseMin) {
+//    pulseDir = 1;
+//  }
+//  else if(pulseOverlay >= 1.0) {
+//    pulseDir = -1;
+//  }
+}
+
 // main loop for color chasing
 
 int currentPalette = 2;
@@ -473,6 +565,7 @@ void setup() {
 
 void loop() {
 //  chordPulseLoop();
-  colorChasingLoop();
+//  colorChasingLoop();
+  fsrTest();
   delay(1);
 }
