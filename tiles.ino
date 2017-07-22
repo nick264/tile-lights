@@ -310,12 +310,11 @@ void chordPulseLoop() {
 
 // main loop for color chasing
 
-int currentPalette = 0;
+int currentPalette = 2;
 const int maxColors = 16;
-float colorStatuses[maxColors][3]; // idNumber; offsetPct; explosionOverlay;
+float colorStatuses[maxColors][4]; // idNumber; offsetPct; explosionOverlay; isFirstRun
 int totalColors = 0;
-float postExplosionSteadyState = 0.6;
-float explosionFadeDownRate = 0.01;
+float explosionTransitionRate = 0.02;
 float offsetSpeed = 0.01;
 
 // temp variables
@@ -324,7 +323,7 @@ int thisG = 0;
 int thisB = 0;
 float thisDistance;
 float colorPower;
-float explosionOverlay;
+float explosionMultiplier;
 
 float distanceAttenuation(float distance) {
 //  float retval = 1.0/2.449 * ( -atan(0.4*distance - 3.0) + 1.2 );
@@ -387,7 +386,8 @@ void colorChasingLoop() {
       Serial.println("new color");
       colorStatuses[totalColors][0] = float(size);
       colorStatuses[totalColors][1] = 0.0;
-      colorStatuses[totalColors][2] = 1.0;
+      colorStatuses[totalColors][2] = 0.0;
+      colorStatuses[totalColors][3] = 1.0;
       totalColors += 1;
     }
   }
@@ -401,10 +401,14 @@ void colorChasingLoop() {
     colorStatuses[c][1] += offsetSpeed;
     if(colorStatuses[c][1] >= 1.0) {
       colorStatuses[c][1] -= 1.0;
+      colorStatuses[c][3] = 0.0;
     }
 
     // fade down explosion
-    colorStatuses[totalColors][2] = std::max(colorStatuses[totalColors][2] - explosionFadeDownRate, postExplosionSteadyState);
+//    colorStatuses[c][2] = std::max(colorStatuses[c][2] - explosionFadeDownRate, postExplosionSteadyState);
+
+    // transition explosion
+    colorStatuses[c][2] = std::min(colorStatuses[c][2] + explosionTransitionRate,float(1.0));
   }
 
 
@@ -413,13 +417,22 @@ void colorChasingLoop() {
     thisR = thisG = thisB = 0;
     
     for( int c = 0; c < totalColors; c++ ) {
-      thisDistance = std::min(abs(colorStatuses[c][1] * segmentSize - k),abs( (colorStatuses[c][1] - 1.0) * segmentSize - k));
-//      colorPower = distanceAttenuation(thisDistance);
+      if(colorStatuses[c][3] > 0.0) {
+        // it's the first run
+        thisDistance = std::min(abs(colorStatuses[c][1] * segmentSize - k),abs( (colorStatuses[c][1] - 1.0) * segmentSize - k));
+      }
+      else {
+        // it's no longer the first run
+        thisDistance = std::min(std::min(abs(colorStatuses[c][1] * segmentSize - k),abs( (colorStatuses[c][1] - 1.0) * segmentSize - k)),abs( (colorStatuses[c][1] + 1.0) * segmentSize - k));
+      }
+      
       colorPower = std::max(1.0-0.12*thisDistance,0.0);
-      explosionOverlay = colorStatuses[c][2];
-      thisR +=  palettes[currentPalette][c % paletteSize][0] / totalColors * colorPower * explosionOverlay;
-      thisG +=  palettes[currentPalette][c % paletteSize][1] / totalColors * colorPower * explosionOverlay;
-      thisB +=  palettes[currentPalette][c % paletteSize][2] / totalColors * colorPower * explosionOverlay;
+//      explosionMultiplier = 1.0 + (1.0 - colorStatuses[c][2] ) * 5; // explosion starts at 0% (full) and completes at 100%
+
+//      ( ( 255 - c ) * ( 1 - transition ) + c ) * colorPower / totalColor
+      thisR += ( ( 255.0 - palettes[currentPalette][c % paletteSize][0] ) * ( 1 - colorStatuses[c][2] ) + palettes[currentPalette][c % paletteSize][0] ) * colorPower / totalColors;
+      thisG += ( ( 255.0 - palettes[currentPalette][c % paletteSize][1] ) * ( 1 - colorStatuses[c][2] ) + palettes[currentPalette][c % paletteSize][1] ) * colorPower / totalColors;
+      thisB += ( ( 255.0 - palettes[currentPalette][c % paletteSize][2] ) * ( 1 - colorStatuses[c][2] ) + palettes[currentPalette][c % paletteSize][2] ) * colorPower / totalColors;      
 
 //      Serial.println("-------");
 //      Serial.println(palettes[currentPalette][c % paletteSize][0]);
@@ -431,10 +444,11 @@ void colorChasingLoop() {
 
     }
 
+//    Serial.println(thisR);
+
     setRowColor(k,strip.Color(thisR,thisG,thisB));
   }
 
-//  setRowColor(0,strip.Color(250,0,0));
   strip.show();
 }
 
