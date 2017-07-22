@@ -337,7 +337,10 @@ void colorChasingLoop() {
   // process commands
   if( Serial.available() > 0 ) {
     byte size = Serial.read();
-
+    Serial.println(size);
+    Serial.println(totalColors);
+    Serial.println(colorStatuses[0][0]);
+    Serial.println(colorStatuses[1][0]);
 //    Serial.println("CURRENT ARRAY:");
 //    for( int n = 0; n < maxColors; n++ ) {
 //      Serial.println("idx: ");
@@ -358,7 +361,7 @@ void colorChasingLoop() {
     // if already exists, assign color in color statuses with explosion
     // if not already exists, set explosionOverlay on existing color
 
-    int existingColor;
+    int existingColor = -1;
     for( int n = 0; n < totalColors; n++ ) {
       if( colorStatuses[n][0] == float(size) ) {
         existingColor = n;
@@ -366,19 +369,22 @@ void colorChasingLoop() {
       
     }
 
-    if( existingColor ) {
+    if( existingColor != -1 ) {
+      Serial.println("Existing Color");
       // de-initialize the color
-      colorStatuses[existingColor][0] = 0.0
-      colorStatuses[existingColor][1] = 0.0
-      colorStatuses[existingColor][2] = 0.0
+      colorStatuses[existingColor][0] = 0.0;
+      colorStatuses[existingColor][1] = 0.0;
+      colorStatuses[existingColor][2] = 0.0;
+      colorStatuses[existingColor][3] = 0.0;
       // for each row after the existing row, move it up one row
       for ( int n = existingColor + 1; n < totalColors; n++ ) {
-        colorStatuses[n-1][0] = colorStatuses[n][0]
-        colorStatuses[n-1][1] = colorStatuses[n][1]
-        colorStatuses[n-1][2] = colorStatuses[n][2]
+        colorStatuses[n-1][0] = colorStatuses[n][0];
+        colorStatuses[n-1][1] = colorStatuses[n][1];
+        colorStatuses[n-1][2] = colorStatuses[n][2];
+        colorStatuses[n-1][3] = colorStatuses[n][3];
       }
       // decrease total color # as you've just removed one
-      totalColor += -1;
+      totalColors += -1;
       
     }
     
