@@ -364,13 +364,25 @@ void colorChasingLoop() {
       if( colorStatuses[n][0] == float(size) ) {
         existingColor = n;
       }
+      
     }
 
     if( existingColor ) {
-      // do something?
-      Serial.println("existingColor");
-      Serial.println(existingColor);
+      // de-initialize the color
+      colorStatuses[existingColor][0] = 0.0
+      colorStatuses[existingColor][1] = 0.0
+      colorStatuses[existingColor][2] = 0.0
+      // for each row after the existing row, move it up one row
+      for ( int n = existingColor + 1; n < totalColors; n++ ) {
+        colorStatuses[n-1][0] = colorStatuses[n][0]
+        colorStatuses[n-1][1] = colorStatuses[n][1]
+        colorStatuses[n-1][2] = colorStatuses[n][2]
+      }
+      // decrease total color # as you've just removed one
+      totalColor += -1;
+      
     }
+    
     else {
       Serial.println("new color");
       colorStatuses[totalColors][0] = float(size);
